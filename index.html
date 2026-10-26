@@ -1,0 +1,1576 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>台風つくーる</title>
+<meta name="description" content="今年もう30個きたし、31個目の台風は自分で作る。くそげー。">
+<style>
+  :root{
+    --ink:#eaf2ff; --sub:#9fb3cf; --panel:rgba(6,18,38,.82);
+    --card:#0f2340; --accent:#ffcf4a; --accent-ink:#3a2a00; --danger:#ff6b5b; --line:rgba(255,255,255,.14);
+  }
+  html,body{margin:0;height:100%;overflow:hidden;background:#06101f;color:var(--ink);
+    font-family:"Hiragino Maru Gothic ProN","Yu Gothic UI","Yu Gothic","Meiryo",sans-serif;
+    touch-action:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+  canvas{display:block}
+  .hidden{display:none!important}
+
+  #hud{position:fixed;left:10px;top:10px;background:var(--panel);border-radius:12px;padding:8px 12px;
+    font-size:12px;line-height:1.45;pointer-events:none;min-width:170px;max-width:62vw}
+  .hud-name{font-weight:800;font-size:14px}
+  .hud-cls{display:inline-block;padding:1px 9px;border-radius:99px;background:#3a6ea5;font-size:12px;font-weight:700;margin:2px 0}
+  .hud-big{font-size:24px;font-weight:900;font-variant-numeric:tabular-nums}
+  .hud-big small{font-size:11px;font-weight:600;color:var(--sub);margin:0 6px 0 2px}
+  .hud-sub{color:var(--sub)}
+  .pill{display:inline-block;background:var(--danger);color:#fff;border-radius:99px;padding:0 7px;margin:2px 3px 0 0;font-size:11px;font-weight:700}
+
+  #compass{position:fixed;right:10px;top:10px;width:78px;height:96px;pointer-events:none;text-align:center}
+  #compass .dial{width:70px;height:70px;margin:0 auto;border-radius:50%;background:var(--panel);position:relative;border:2px solid var(--line)}
+  #needle{position:absolute;inset:0;display:flex;align-items:flex-start;justify-content:center;font-size:22px;color:var(--accent);padding-top:3px;box-sizing:border-box}
+  #compass .lbl{font-size:10px;color:var(--sub);margin-top:3px;background:var(--panel);border-radius:6px;padding:1px 4px;display:inline-block}
+
+  #banner{position:fixed;left:50%;top:112px;transform:translateX(-50%);text-align:center;pointer-events:none;
+    font-weight:900;font-size:clamp(16px,4.6vw,24px);color:var(--accent);text-shadow:0 2px 0 #000,0 0 12px rgba(0,0,0,.8);
+    width:calc(100% - 32px);max-width:640px;opacity:0}
+  #banner.show{animation:pop 3.2s ease forwards}
+  #banner .s{display:block;font-size:.62em;color:#fff;font-weight:700;margin-top:4px}
+  @keyframes pop{0%{opacity:0;transform:translateX(-50%) scale(.6)}8%{opacity:1;transform:translateX(-50%) scale(1.08)}14%{transform:translateX(-50%) scale(1)}80%{opacity:1}100%{opacity:0}}
+
+  #hint{position:fixed;left:50%;top:14px;transform:translateX(-50%);background:var(--panel);border-radius:12px;padding:10px 14px;
+    font-weight:800;text-align:center;pointer-events:none;width:max-content;max-width:calc(100% - 32px);font-size:14px}
+  #hint small{display:block;color:var(--sub);font-weight:600;font-size:11px;margin-top:3px}
+
+  #ticker{position:fixed;left:0;right:0;bottom:0;height:30px;background:rgba(150,10,20,.9);display:flex;align-items:center;overflow:hidden;pointer-events:none;font-size:13px;font-weight:700}
+  #ticker .tag{flex:none;background:#fff;color:#a00;padding:0 8px;height:100%;display:flex;align-items:center;font-weight:900;z-index:1}
+  #ticker .lane{position:relative;flex:1;height:100%;overflow:hidden}
+  #tickerText{position:absolute;white-space:nowrap;top:50%;transform:translate(100vw,-50%)}
+  #tickerText.run{animation:tick 9s linear forwards}
+  @keyframes tick{from{transform:translate(100vw,-50%)}to{transform:translate(-100%,-50%)}}
+
+  .overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(3,10,25,.55);padding:16px;box-sizing:border-box}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px 18px;width:100%;max-width:420px;max-height:100%;overflow:auto;box-sizing:border-box;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+  .card h1{margin:0 0 4px;font-size:34px;letter-spacing:.04em;text-align:center}
+  .card h1 span{color:var(--accent)}
+  .lead{text-align:center;color:var(--sub);font-size:13px;margin:0 0 14px}
+  .card h2{margin:0 0 6px;font-size:20px;text-align:center}
+  label{display:block;font-size:12px;color:var(--sub);margin:0 0 4px}
+  input[type=text]{width:100%;box-sizing:border-box;font:inherit;font-size:16px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:#081a31;color:var(--ink);-webkit-user-select:text;user-select:text}
+  .row{display:flex;gap:8px;align-items:center}
+  .btn{display:block;width:100%;box-sizing:border-box;margin-top:12px;font:inherit;font-weight:900;font-size:17px;padding:13px;border:0;border-radius:12px;
+    background:var(--accent);color:var(--accent-ink);cursor:pointer;text-align:center;text-decoration:none}
+  .btn.sub{background:#24426b;color:var(--ink);font-size:15px}
+  .btn.small{width:auto;margin:0;padding:10px 12px;font-size:13px;background:#24426b;color:var(--ink)}
+  ul.how{margin:14px 0 0;padding:0;list-style:none;font-size:13px;line-height:1.7}
+  ul.how li{display:flex;gap:8px}
+  ul.how b{color:var(--accent)}
+  .best{text-align:center;font-size:12px;color:var(--sub);margin-top:10px}
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+  .stat{background:#081a31;border-radius:10px;padding:8px 10px}
+  .stat .k{font-size:11px;color:var(--sub)}
+  .stat .v{font-size:19px;font-weight:900;font-variant-numeric:tabular-nums}
+  .rank{text-align:center;font-size:24px;font-weight:900;color:var(--accent);margin:6px 0 2px}
+  .comment{text-align:center;font-size:13px;color:var(--ink);margin:0 0 4px;line-height:1.6}
+  .reason{text-align:center;font-size:12px;color:var(--sub)}
+  .score{text-align:center;font-size:13px;color:var(--sub);margin-top:4px}
+  .score b{font-size:30px;color:var(--ink)}
+  .newrec{color:var(--danger);font-weight:900}
+
+  /* 第0章 */
+  #gChap{position:fixed;left:10px;top:10px;background:var(--panel);border-radius:99px;padding:6px 12px;font-size:12px;font-weight:800;pointer-events:none}
+  #skipG{position:fixed;right:10px;top:10px;font:inherit;font-size:12px;font-weight:700;background:var(--panel);color:var(--sub);border:1px solid var(--line);border-radius:99px;padding:6px 12px;cursor:pointer}
+  #gcap{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);width:calc(100% - 24px);max-width:560px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;box-sizing:border-box;pointer-events:none}
+  #gStep{font-weight:900;font-size:16px;color:var(--accent)}
+  #gBody{font-size:13px;line-height:1.65;margin-top:4px}
+  .gbar{height:8px;border-radius:99px;background:#081a31;margin-top:8px;overflow:hidden}
+  #gBar{height:100%;width:0;background:var(--accent);border-radius:99px}
+
+  /* ライブカメラ */
+  #camBox{position:fixed;left:10px;bottom:40px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px;pointer-events:none;font-size:10.5px;line-height:1.5}
+  #camHead{display:flex;justify-content:space-between;gap:6px;font-weight:800;font-size:12px;margin:0 2px 4px}
+  #camHead .live{color:#ff5a5a;font-size:10px}
+  #cam{display:block;border-radius:8px}
+  #camInfo{margin:4px 2px 0}
+  .lvpill{display:inline-block;border-radius:5px;padding:0 4px;font-weight:900;margin-right:3px}
+
+  /* まなび */
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 4px}
+  .tab{flex:1;font:inherit;font-size:13px;font-weight:800;padding:8px 4px;border-radius:10px;border:1px solid var(--line);background:#081a31;color:var(--sub);cursor:pointer;min-width:64px}
+  .tab.on{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+  .lpane{font-size:13.5px;line-height:1.75;-webkit-user-select:text;user-select:text}
+  .lpane h3{font-size:15px;margin:14px 0 4px;color:var(--accent)}
+  .lpane ol,.lpane ul{padding-left:1.3em;margin:4px 0}
+  .lpane li{margin:2px 0}
+  .lpane table{width:100%;border-collapse:collapse;font-size:12.5px;margin:6px 0}
+  .lpane td,.lpane th{border-bottom:1px solid var(--line);padding:5px 4px;text-align:left;vertical-align:top}
+  .lpane th{color:var(--sub);font-weight:700}
+  .note{font-size:11.5px;color:var(--sub);line-height:1.6}
+  .lv{display:inline-block;min-width:3.4em;font-weight:900;border-radius:6px;padding:0 4px;text-align:center;border:1px solid var(--line)}
+
+  /* クイズ */
+  .quiz{background:#081a31;border-radius:12px;padding:12px;margin-top:12px}
+  .qhead{font-weight:900;font-size:14px}
+  .qhead span{color:var(--sub);font-weight:700;font-size:12px;margin-left:4px}
+  .qtext{margin:8px 0 2px;font-size:14px;line-height:1.6}
+  .qc{display:block;width:100%;text-align:left;font:inherit;font-size:14px;padding:10px 12px;margin-top:6px;border-radius:10px;border:1px solid var(--line);background:#12305a;color:var(--ink);cursor:pointer}
+  .qc.ok{background:#1d7a45} .qc.ng{background:#8a2a2a} .qc:disabled{cursor:default}
+  .qexp{font-size:13px;line-height:1.65;margin-top:8px}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="hud" class="hidden">
+  <div class="hud-name" id="hName"></div>
+  <div><span class="hud-cls" id="hCls"></span></div>
+  <div class="hud-big"><span id="hP">1006</span><small>hPa</small><span id="hV">11</span><small>m/s</small></div>
+  <div class="hud-sub" id="hSub"></div>
+  <div class="hud-sub" id="hWind"></div>
+  <div id="hPills"></div>
+</div>
+
+<div id="compass" class="hidden">
+  <div class="dial"><div id="needle">▲</div></div>
+  <div class="lbl">「上」の向き</div>
+</div>
+
+<div id="hint" class="hidden">海をタップして熱帯低気圧を発生させよう<small>南のあったかい海（オレンジ色）がおすすめ</small></div>
+<div id="camBox" class="hidden">
+  <div id="camHead"><span id="camName"></span><span class="live">● LIVE</span></div>
+  <canvas id="cam"></canvas>
+  <div id="camInfo"></div>
+</div>
+<div id="gChap" class="hidden">第0章　台風のたまご</div>
+<button id="skipG" class="hidden" type="button">第0章をとばす ≫</button>
+<div id="gcap" class="hidden">
+  <div id="gStep"></div>
+  <div id="gBody"></div>
+  <div class="gbar"><div id="gBar"></div></div>
+</div>
+<div id="banner"></div>
+<div id="ticker" class="hidden"><div class="tag">ニュース</div><div class="lane"><span id="tickerText"></span></div></div>
+
+<div id="title" class="overlay">
+  <div class="card">
+    <h1>台風<span>つくーる</span></h1>
+    <p class="lead">今年はもう台風が30個きた。<br>31個目は、自分で作る。</p>
+    <label for="nameIn">台風の名前（空なら勝手に決まります）</label>
+    <div class="row">
+      <input type="text" id="nameIn" maxlength="10" placeholder="例：ちくわ" autocomplete="off">
+      <button class="btn small" id="randName" type="button">おまかせ</button>
+    </div>
+    <button class="btn" id="startBtn" type="button">海へ行く 🌀</button>
+    <button class="btn sub learnBtn" type="button">📖 台風のまなび（しくみ・そなえ・にげかた）</button>
+    <ul class="how">
+      <li>🥚<span>まずは<b>第0章</b>：海をあたためて、雲を集めて、うずを作るところから</span></li>
+      <li>🌡️<span><b>あったかい海</b>（オレンジ）で発達、<b>冷たい海と陸</b>で弱る</span></li>
+      <li>💧<span>水蒸気を吸うと気圧がドンと下がる。🏜️乾いた空気はダメ</span></li>
+      <li>🎮<span>矢印キー / WASD / 画面をドラッグで移動</span></li>
+      <li>🔄<span><b>台風なので操作も反時計回りに回ります</b>（右上の矢印が「上」の向き）</span></li>
+      <li>🧊<span>自分が通った海は冷えます。同じ所をぐるぐるしても無駄</span></li>
+      <li>🏆<span>北の冷たい海に行くか、弱りきったら終了。気圧が低いほど高得点</span></li>
+    </ul>
+    <div class="best" id="bestLine"></div>
+  </div>
+</div>
+
+<div id="result" class="overlay hidden">
+  <div class="card">
+    <h2 id="rTitle"></h2>
+    <div class="reason" id="rReason"></div>
+    <div class="rank" id="rRank"></div>
+    <p class="comment" id="rComment"></p>
+    <div class="stats">
+      <div class="stat"><div class="k">最低気圧</div><div class="v" id="rP"></div></div>
+      <div class="stat"><div class="k">最大風速</div><div class="v" id="rV"></div></div>
+      <div class="stat"><div class="k">寿命</div><div class="v" id="rAge"></div></div>
+      <div class="stat"><div class="k">上陸 / 合体 / 予報裏切り</div><div class="v" id="rEtc"></div></div>
+    </div>
+    <div class="score">スコア <b id="rScore"></b> <span id="rNew"></span></div>
+    <div class="quiz">
+      <div class="qhead">🛟 本物の台風が来たら？クイズ<span id="qNum"></span></div>
+      <div class="qtext" id="qText"></div>
+      <div id="qChoices"></div>
+      <div class="qexp hidden" id="qExp"></div>
+      <button class="btn sub hidden" id="qNext" type="button">次の問題</button>
+    </div>
+    <button class="btn" id="againBtn" type="button">次の台風を作る</button>
+    <a class="btn sub" id="shareX" target="_blank" rel="noopener">X でじまんする</a>
+    <button class="btn sub" id="mapBtn" type="button">進路図をながめる</button>
+    <button class="btn sub learnBtn" type="button">📖 台風のまなび</button>
+  </div>
+</div>
+
+<div id="learn" class="overlay hidden">
+  <div class="card">
+    <h2>📖 台風のまなび</h2>
+    <div class="tabs">
+      <button class="tab on" data-tab="how" type="button">しくみ</button>
+      <button class="tab" data-tab="power" type="button">強さ</button>
+      <button class="tab" data-tab="prep" type="button">そなえ</button>
+      <button class="tab" data-tab="run" type="button">にげかた</button>
+    </div>
+
+    <div class="lpane" data-pane="how">
+      <h3>台風ができるまで</h3>
+      <ol>
+        <li><b>海があたたまる</b>：夏〜秋の南の海は水温が26〜27℃以上。海の水がどんどん蒸発して、空気が水蒸気でしめっぽくなる。</li>
+        <li><b>積乱雲がのびる</b>：しめった空気は上にのぼって冷え、水蒸気が雲のつぶになる。このとき熱が出る（<b>潜熱</b>）ので空気がさらにあたたまり、もっと高くのぼる。こうして背の高い積乱雲ができる。</li>
+        <li><b>雲が集まる</b>：積乱雲がたくさん生まれて、大きな雲のかたまりになる。</li>
+        <li><b>うずになる</b>：空気が上にのぼるので、海の近くの気圧が下がり、まわりから空気が吸い込まれる。地球が回っているせいで（<b>コリオリの力</b>）その風は曲がり、北半球では<b>反時計回り</b>のうずになる。</li>
+        <li><b>自分で強くなる</b>：風が強い → 蒸発が増える → 雲が増える → 気圧が下がる → 風がもっと強くなる…のくりかえし。</li>
+      </ol>
+      <p>熱帯の海で生まれた低気圧（熱帯低気圧）のうち、北西太平洋や南シナ海にあって、中心付近の最大風速が<b>秒速17.2m以上</b>になったものが「台風」です。</p>
+      <h3>台風が生まれる条件</h3>
+      <ul>
+        <li>海水温がだいたい26.5℃より高い</li>
+        <li>赤道から少しはなれている（赤道の上ではコリオリの力がほぼゼロで、うずにならない）</li>
+        <li>上空と地上の風の差（<b>鉛直シア</b>）が小さい。差が大きいと雲の上のほうがずれて、うずがまとまらない</li>
+        <li>空気がしめっている（乾いた空気が入ると雲が育たない）</li>
+      </ul>
+      <h3>台風が終わるとき</h3>
+      <ul>
+        <li><b>陸に上がる</b>：水蒸気がもらえなくなり、地面とのまさつで弱る</li>
+        <li><b>冷たい海に行く</b>：燃料が足りなくなる</li>
+        <li><b>温帯低気圧に変わる</b>：北の冷たい空気とまざる。でも、<b>温帯低気圧になっても風や雨が強いままのことがある</b>ので油断しない</li>
+      </ul>
+    </div>
+
+    <div class="lpane hidden" data-pane="power">
+      <h3>強さ（中心付近の最大風速）</h3>
+      <table>
+        <tr><th>呼び方</th><th>最大風速</th></tr>
+        <tr><td>（呼び方なし）</td><td>17.2〜33 m/s 未満</td></tr>
+        <tr><td>強い</td><td>33〜44 m/s 未満</td></tr>
+        <tr><td>非常に強い</td><td>44〜54 m/s 未満</td></tr>
+        <tr><td>猛烈な</td><td>54 m/s 以上</td></tr>
+      </table>
+      <h3>大きさ（秒速15m以上の風が吹く範囲の半径）</h3>
+      <table>
+        <tr><td>大型（大きい）</td><td>500〜800 km 未満</td></tr>
+        <tr><td>超大型（非常に大きい）</td><td>800 km 以上</td></tr>
+      </table>
+      <h3>風の強さと、まわりで起きること（目安）</h3>
+      <table>
+        <tr><th>平均風速</th><th>どうなる？</th></tr>
+        <tr><td>10〜15 m/s</td><td>風に向かって歩きにくい。傘がさせない</td></tr>
+        <tr><td>15〜20 m/s</td><td>風に向かって歩けない。転ぶ人も出る</td></tr>
+        <tr><td>20〜30 m/s</td><td>何かにつかまらないと立っていられない。飛んできた物でけがをするおそれ</td></tr>
+        <tr><td>30〜40 m/s</td><td>屋根がはがれたり、看板が飛んだりする</td></tr>
+        <tr><td>40 m/s 以上</td><td>家がこわれることもある</td></tr>
+      </table>
+      <h3>雨の強さ（1時間に降る量）</h3>
+      <table>
+        <tr><th>雨量</th><th>どんな雨？</th></tr>
+        <tr><td>10〜20 mm</td><td>ザーザーと降る</td></tr>
+        <tr><td>20〜30 mm</td><td>どしゃ降り</td></tr>
+        <tr><td>30〜50 mm</td><td>バケツをひっくり返したよう</td></tr>
+        <tr><td>50〜80 mm</td><td>滝のよう。傘はまったく役に立たない</td></tr>
+        <tr><td>80 mm 以上</td><td>息苦しくなるような圧迫感。恐怖を感じる</td></tr>
+      </table>
+      <h3>知っておくと役に立つこと</h3>
+      <ul>
+        <li><b>大雨は中心から遠くても降る</b>：台風のまわりのらせん状の雨雲や、秋雨前線と重なると、台風が来る前から大雨になることがある。</li>
+        <li><b>進む向きの右側が危ない</b>：北半球では、台風の進む速さと、うずの風の向きが右側で足し算になるので、右側のほうが風が強くなりやすい。</li>
+        <li><b>台風の目</b>：真ん中は風が弱く、晴れることもある。でも通りすぎると<b>反対向きの暴風</b>が急に来るので外に出ない。</li>
+        <li><b>予報円</b>：台風の<b>中心</b>が70%の確率で入る範囲。円が大きい＝台風が大きい、ではなく「進路がまだよく分からない」という意味。</li>
+        <li><b>気圧</b>：低いほど強い。観測された世界一低い気圧は、1979年の台風20号（ティップ）の870hPa。</li>
+      </ul>
+    </div>
+
+    <div class="lpane hidden" data-pane="prep">
+      <h3>台風が来る前にやること</h3>
+      <ul>
+        <li><b>ハザードマップを見る</b>：自分の家や学校・職場が、洪水・土砂災害・高潮で危ない場所か調べる（市区町村のサイトや、国土交通省の「重ねるハザードマップ」）。</li>
+        <li><b>逃げる場所と道を決めておく</b>：避難所だけでなく、安全な場所にある親せきや友だちの家も候補になる。</li>
+        <li><b>水と食べもの</b>：飲み水は1人1日3リットルが目安。最低3日分、できれば1週間分。常備薬も。</li>
+        <li><b>停電にそなえる</b>：スマホのモバイルバッテリーを充電、懐中電灯、電池式ラジオ。ろうそくは火事のもとになるので避ける。</li>
+        <li><b>家のまわりを片づける</b>：植木鉢・物干し竿・自転車など飛びそうな物は家に入れるか固定。側溝や排水口のつまりをとる。</li>
+        <li><b>窓をまもる</b>：雨戸やシャッターを閉める。カーテンも閉めて、割れたガラスが飛び散るのをふせぐ。</li>
+        <li><b>お風呂に水をためる</b>：断水したときトイレを流すのに使える。</li>
+      </ul>
+      <h3>情報の集め方</h3>
+      <ul>
+        <li>気象庁の台風情報と「キキクル（危険度分布）」で、大雨による危険が近くで高まっていないか確認</li>
+        <li>市区町村の防災メール・防災アプリ・テレビ・ラジオ</li>
+      </ul>
+    </div>
+
+    <div class="lpane hidden" data-pane="run">
+      <h3>警戒レベル（気象庁や市区町村が出す）</h3>
+      <table>
+        <tr><th>レベル</th><th>意味と、やること</th></tr>
+        <tr><td><span class="lv" style="background:#fff;color:#000">1</span></td><td>早期注意情報。災害への心がまえを</td></tr>
+        <tr><td><span class="lv" style="background:#f2e700;color:#000">2</span></td><td>大雨・洪水・高潮の注意報。避難の場所と道を確認</td></tr>
+        <tr><td><span class="lv" style="background:#ff2800;color:#fff">3</span></td><td><b>高齢者等避難</b>。お年寄りや体の不自由な人などは避難を始める</td></tr>
+        <tr><td><span class="lv" style="background:#aa00aa;color:#fff">4</span></td><td><b>避難指示</b>。危ない場所にいる人は<b>全員避難</b></td></tr>
+        <tr><td><span class="lv" style="background:#0c000c;color:#fff">5</span></td><td><b>緊急安全確保</b>。もう災害が起きているか、せまっている。命を守る行動を。<b>レベル5を待ってはいけない</b></td></tr>
+      </table>
+      <p class="note">「警戒レベル4までに必ず避難」がルールです。</p>
+      <h3>川の水位と警戒レベル</h3>
+      <table>
+        <tr><th>川の水位</th><th>警戒レベル</th></tr>
+        <tr><td>氾濫注意水位</td><td>レベル2相当</td></tr>
+        <tr><td>避難判断水位</td><td>レベル3相当</td></tr>
+        <tr><td>氾濫危険水位（いつあふれてもおかしくない）</td><td>レベル4相当</td></tr>
+        <tr><td>氾濫発生</td><td>レベル5相当</td></tr>
+      </table>
+      <p class="note">大きな川の水位は、国土交通省の「川の防災情報」などで見られます。雨がやんだあとも、上流で降った雨で水位が上がり続けることがあります。</p>
+      <h3>逃げるときのコツ</h3>
+      <ul>
+        <li><b>明るいうちに、早めに</b>。夜や暴風の中の移動はとても危ない。</li>
+        <li>外がもう危なくて出られないときは、<b>家の2階以上</b>で、がけや斜面から<b>はなれた部屋</b>へ。</li>
+        <li><b>川・用水路・田んぼ・海を見に行かない</b>。毎年、様子を見に行って流される事故が起きている。</li>
+        <li><b>水につかった道は車で通らない</b>。水深30cmくらいでも車が動かなくなることがあり、水の力でドアが開かなくなることもある。</li>
+        <li>歩くときは<b>運動靴</b>（長靴は中に水が入って歩きにくい）。流れがあると、ひざくらいの深さでも歩けなくなる。</li>
+        <li>海の近くは<b>高潮</b>に注意。早めに高い所へ。</li>
+        <li><b>台風の目に入って風がやんでも外に出ない</b>。すぐに反対向きの暴風が来る。</li>
+      </ul>
+      <p class="note">このページは目安です。実際の台風のときは、気象庁やお住まいの市区町村の情報にしたがってください。</p>
+    </div>
+
+    <button class="btn" id="learnClose" type="button">とじる</button>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+// ---------- 小道具 ----------
+const $ = id => document.getElementById(id);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const rand = (a, b) => a + Math.random() * (b - a);
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+};
+
+const NAMES = ['ちくわ', 'ポチ', 'コロッケ', 'もちもち', 'ゴンザレス', 'おでん', 'メンダコ', 'だいふく', 'ぴえん', 'たくあん', 'ジョニー', 'よしお', 'ねりけし', 'ブロッコリー', 'カピバラ'];
+const NEWS = [
+  '気象庁「30個で終わりだと思ってた」',
+  'スーパーでコロッケが品薄に',
+  '会社員「明日って出社ですか？」',
+  'ベランダの植木鉢、室内へ避難',
+  '小学生、休校を祈ってテルテル坊主を逆さに吊るす',
+  '気象予報士、台風のネタが尽きる',
+  'ビニール傘、今年も裏返る',
+  'テルテル坊主の売上、前年比300%',
+  '台風の名前、ついに一般人がつけはじめる',
+  'カップ麺の棚、からっぽ',
+  '中継リポーター、また海辺に立たされる',
+  '猫、なにかを察して押し入れへ',
+  '「不要不急の外出は控えて」が今年の流行語候補に'
+];
+
+// ---------- 地図（ざっくり） ----------
+const LON0 = 110, LON1 = 160, LAT0 = 5, LAT1 = 45;
+const LANDS = [
+  { jp: false, pts: [[100,46],[137,46],[137,45],[135.3,43.4],[133,42.8],[131,42.6],[129.9,42.4],[129.7,40.8],[127.5,39.8],[128.6,38.5],[129.5,36.5],[129.3,35.2],[126.1,34.5],[126.3,35.5],[126.5,37.5],[125.2,38],[124.3,40],[121.5,39],[121.6,40.8],[119,39.3],[118,39.2],[117.7,38.5],[119,37.2],[120.7,37.8],[122.5,37],[120.3,36],[119.2,35],[120.8,32.5],[121.9,31],[121.5,30],[122,29.5],[120.5,27.5],[119.5,25.5],[117,23.6],[114,22.3],[111,21.5],[110,21],[100,21]] },
+  { jp: false, pts: [[109,20.1],[110.9,20],[111,19.6],[110.4,18.4],[109.5,18.2],[108.6,19.2]] },
+  { jp: false, pts: [[121,25.3],[122,25],[121.5,23],[120.8,21.9],[120.1,23],[120.3,24.5]] },
+  { jp: false, pts: [[120,18.5],[122.2,18.5],[122.3,16],[121.6,14.6],[124,13.2],[123.6,12.6],[121,13.6],[120.5,14.5],[119.8,16.2]] },
+  { jp: false, pts: [[122,11.2],[125.5,12.4],[126.5,8],[125.6,5.8],[122,6.9],[123.2,9.4]] },
+  { jp: true, pts: [[130.9,34.0],[132.5,34.3],[135,34.6],[136.9,34.6],[138.9,34.7],[140,35],[140.9,35.7],[140.6,36.9],[141,38.3],[141.9,39.6],[141.4,41.4],[140,41.2],[139.9,40],[140,39],[139.5,38],[138.5,37.5],[137.3,36.8],[136.7,37.3],[136,35.7],[133.5,35.5],[131.5,34.6]] },
+  { jp: true, pts: [[140,41.5],[141.2,41.8],[143.3,42],[145.5,43.3],[144.5,44],[142,45.4],[141.6,43.8],[140.4,43.2],[139.9,42.5]] },
+  { jp: true, pts: [[129.8,33.3],[130.9,33.9],[131.9,33.2],[131.4,31.4],[130.6,31],[130.2,31.8],[129.8,32.7]] },
+  { jp: true, pts: [[132.4,33],[133,34],[134.6,34.2],[134.7,33.8],[134.1,33.3],[133,32.7]] },
+  { jp: true, pts: [[127.6,26.1],[128,26.6],[128.3,26.8],[127.9,26.9],[127.7,26.5]] }
+];
+function inPoly(x, y, pts) {
+  let inside = false;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const [xi, yi] = pts[i], [xj, yj] = pts[j];
+    if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+const landAt = (lon, lat) => LANDS.find(l => inPoly(lon, lat, l.pts)) || null;
+
+// ---------- 海水温 ----------
+const GW = 100, GH = 80; // 0.5度マス
+const sstOff = new Float32Array(GW * GH);
+const sstCv = document.createElement('canvas'); sstCv.width = GW; sstCv.height = GH;
+const sctx = sstCv.getContext('2d');
+const sstImg = sctx.createImageData(GW, GH);
+let globalSST = 0, sstDirty = true, sstTimer = 0;
+
+function cellIdx(lon, lat) {
+  const gx = Math.floor((lon - LON0) / 0.5), gy = Math.floor((LAT1 - lat) / 0.5);
+  if (gx < 0 || gy < 0 || gx >= GW || gy >= GH) return -1;
+  return gy * GW + gx;
+}
+function sstBase(lon, lat) {
+  let t = 30.3 - Math.max(0, lat - 20) * 0.5;
+  t += 0.45 * Math.sin(lon * 0.27) * Math.cos(lat * 0.31);
+  // 黒潮（日本の南のあったかい帯）
+  const kLat = 30.5 + (lon - 130) * 0.3;
+  t += 1.3 * Math.exp(-((lat - kLat) ** 2) / 2.5) * (lon > 127 && lon < 146 ? 1 : 0.3);
+  return t;
+}
+function sst(lon, lat) {
+  const i = cellIdx(lon, lat);
+  return sstBase(lon, lat) + (i >= 0 ? sstOff[i] : 0) + globalSST;
+}
+const SST_STOPS = [[18,[30,55,120]],[22,[35,100,175]],[25,[50,150,200]],[26.5,[70,185,180]],[28,[225,205,90]],[29.5,[240,145,55]],[31,[215,65,55]]];
+function sstColor(t) {
+  if (t <= SST_STOPS[0][0]) return SST_STOPS[0][1];
+  for (let i = 1; i < SST_STOPS.length; i++) {
+    if (t <= SST_STOPS[i][0]) {
+      const [t0, c0] = SST_STOPS[i - 1], [t1, c1] = SST_STOPS[i];
+      const f = (t - t0) / (t1 - t0);
+      return [c0[0] + (c1[0] - c0[0]) * f, c0[1] + (c1[1] - c0[1]) * f, c0[2] + (c1[2] - c0[2]) * f];
+    }
+  }
+  return SST_STOPS[SST_STOPS.length - 1][1];
+}
+function renderSST() {
+  const d = sstImg.data;
+  for (let gy = 0; gy < GH; gy++) for (let gx = 0; gx < GW; gx++) {
+    const lon = LON0 + (gx + 0.5) * 0.5, lat = LAT1 - (gy + 0.5) * 0.5;
+    const c = sstColor(sst(lon, lat)), k = (gy * GW + gx) * 4;
+    d[k] = c[0]; d[k + 1] = c[1]; d[k + 2] = c[2]; d[k + 3] = 255;
+  }
+  sctx.putImageData(sstImg, 0, 0);
+  sstDirty = false;
+}
+function coolArea(lon, lat, r, amount) {
+  const g0x = Math.floor((lon - r - LON0) / 0.5), g1x = Math.ceil((lon + r - LON0) / 0.5);
+  const g0y = Math.floor((LAT1 - lat - r) / 0.5), g1y = Math.ceil((LAT1 - lat + r) / 0.5);
+  for (let gy = Math.max(0, g0y); gy <= Math.min(GH - 1, g1y); gy++) for (let gx = Math.max(0, g0x); gx <= Math.min(GW - 1, g1x); gx++) {
+    const cl = LON0 + (gx + 0.5) * 0.5, ca = LAT1 - (gy + 0.5) * 0.5;
+    const dd = Math.hypot(cl - lon, ca - lat);
+    if (dd > r) continue;
+    const i = gy * GW + gx;
+    sstOff[i] = Math.max(-4, sstOff[i] - amount * (1 - dd / r));
+  }
+  sstDirty = true;
+}
+
+// ---------- 画面 ----------
+const cv = $('c'), ctx = cv.getContext('2d');
+let cw = 0, ch = 0;
+const cam = { lon: 135, lat: 25, s: 10 };
+function resize() {
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  cw = innerWidth; ch = innerHeight;
+  cv.width = cw * dpr; cv.height = ch * dpr;
+  cv.style.width = cw + 'px'; cv.style.height = ch + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+addEventListener('resize', resize); resize();
+const fitScale = () => Math.min(cw / (LON1 - LON0), (ch - 40) / (LAT1 - LAT0));
+const playScale = () => Math.max(fitScale(), Math.min(cw, ch) / 20);
+const toScr = (lon, lat) => [cw / 2 + (lon - cam.lon) * cam.s, ch / 2 - (lat - cam.lat) * cam.s];
+const toWorld = (x, y) => [cam.lon + (x - cw / 2) / cam.s, cam.lat - (y - ch / 2) / cam.s];
+function camGoal(lon, lat, s) {
+  const hw = cw / 2 / s, hh = ch / 2 / s;
+  lon = hw * 2 >= LON1 - LON0 ? (LON0 + LON1) / 2 : clamp(lon, LON0 + hw, LON1 - hw);
+  lat = hh * 2 >= LAT1 - LAT0 ? (LAT0 + LAT1) / 2 : clamp(lat, LAT0 + hh, LAT1 - hh);
+  return [lon, lat];
+}
+
+// ---------- ゲーム状態 ----------
+let S = null;
+let phase = 'title'; // title / place / play / ending / result / map
+let typhoonNo = store.get('tyNo', 31);
+
+function newState(name, lon, lat) {
+  return {
+    name, no: typhoonNo, lon, lat, P: 1006, minP: 1006, age: 0, spin: 0, theta: 0,
+    track: [{ lon, lat, P: 1006 }], trackT: 0,
+    items: [], itemT: 0.5, floats: [],
+    eventT: 7, timers: [], forecast: null, buddy: null,
+    invert: 0, lazyWest: 0, push: [0, 0], pushT: 0,
+    landfalls: 0, wasJp: false, merges: 0, betray: 0, croquettes: 0, floods: 0,
+    wasTyphoon: false, milestones: {}, tickT: 1.5, endReason: ''
+  };
+}
+
+const wind = P => Math.max(8, 5.6 * Math.sqrt(Math.max(0, 1010 - P)));
+function klass(P) {
+  const v = wind(P);
+  if (v < 17.2) return ['熱帯低気圧', '#4a6a8a'];
+  if (v < 33) return ['台風', '#3a7fc0'];
+  if (v < 44) return ['強い台風', '#c49a1a'];
+  if (v < 54) return ['非常に強い台風', '#d0602a'];
+  return ['猛烈な台風', '#c0263a'];
+}
+function windEffect(v) {
+  if (v < 15) return '風に向かって歩きにくい。傘がさせない';
+  if (v < 20) return '風に向かって歩けない。転ぶ人も';
+  if (v < 30) return 'つかまらないと立っていられない';
+  if (v < 40) return '屋根がはがれたり、看板が飛んだりする';
+  return '家がこわれることもある';
+}
+const rDeg = P => 0.55 + Math.max(0, 1010 - P) * 0.011;
+
+// ---------- 日本のライブカメラ ----------
+const CITIES = [
+  ['那覇', 127.68, 26.21], ['鹿児島', 130.56, 31.6], ['宮崎', 131.42, 31.91], ['福岡', 130.4, 33.59],
+  ['高知', 133.53, 33.56], ['広島', 132.46, 34.4], ['大阪', 135.5, 34.69], ['名古屋', 136.91, 35.18],
+  ['静岡', 138.38, 34.98], ['東京', 139.69, 35.69], ['新潟', 139.02, 37.9], ['仙台', 140.87, 38.27], ['札幌', 141.35, 43.06]
+].map(([name, lon, lat]) => ({ name, lon, lat, wind: 0, rain: 0, u: 0, L: 0, d: 99, sev: 0, flooded: false }));
+let camCity = CITIES[0], camSwitchT = 0, camInfoT = 0;
+const camFx = { t: 0, rain: [], leaves: [], fly: [], flash: 0 };
+const LV_STYLE = { 2: 'background:#f2e700;color:#000', 3: 'background:#ff2800;color:#fff', 4: 'background:#aa00aa;color:#fff', 5: 'background:#0c000c;color:#fff;border:1px solid #fff' };
+
+function resetCities() {
+  for (const c of CITIES) { c.wind = c.rain = c.u = c.L = c.sev = 0; c.flooded = false; }
+  camFx.rain = []; camFx.leaves = []; camFx.fly = []; camSwitchT = 0;
+}
+function riverInfo(L) {
+  if (L < 0.4) return ['ふだんどおり', 0, ''];
+  if (L < 0.65) return ['氾濫注意水位', 2, '避難の場所と道を確認'];
+  if (L < 0.85) return ['避難判断水位', 3, 'お年寄りなどは避難を始める'];
+  if (L < 1) return ['氾濫危険水位', 4, '危ない場所の人は全員避難'];
+  return ['氾濫発生', 5, '命を守る行動を'];
+}
+function rainLabel(mm) {
+  if (mm < 1) return '降っていない';
+  if (mm < 10) return '雨';
+  if (mm < 20) return 'ザーザー降り';
+  if (mm < 30) return 'どしゃ降り';
+  if (mm < 50) return 'バケツをひっくり返したような雨';
+  if (mm < 80) return '滝のような雨';
+  return '息苦しくなるような雨';
+}
+// 台風の位置と強さから、各都市の雨・風・川の水位を計算する
+function updateCities(dt) {
+  const Vmax = wind(S.P), R = rDeg(S.P), Rm = R * 0.5;
+  const core = 25 + Math.max(0, 1010 - S.P) * 0.9;
+  let best = null, near = null;
+  for (const c of CITIES) {
+    const dx = (c.lon - S.lon) * Math.cos(c.lat * Math.PI / 180), dy = c.lat - S.lat;
+    const d = Math.max(0.05, Math.hypot(dx, dy));
+    c.d = d;
+    c.wind = S.P > 1006 ? 0 : d < Rm ? Vmax * d / Rm : Vmax * Math.pow(Rm / d, 0.6);
+    c.u = (-dy - 0.3 * dx) / d; // 反時計回り＋少し吸い込む風の、東西の向き
+    c.rain = Math.min(120, core * Math.exp(-((d / (R * 2)) ** 2)) + core * 0.25 * Math.exp(-((d / (R * 3.5)) ** 2)));
+    if (c.rain < 0.5) c.rain = 0;
+    c.L = clamp(c.L + (c.rain / 50) * 0.42 * dt - c.L * 0.1 * dt, 0, 1.5);
+    if (c.L >= 1 && !c.flooded) {
+      c.flooded = true; S.floods++;
+      news(`${c.name}で川が氾濫しました`);
+      if (S.floods === 1) banner(`${c.name}で川が氾濫！`, '氾濫発生は警戒レベル5相当。その前に避難しておくのが大事');
+    }
+    c.sev = c.wind / 40 + c.rain / 60 + c.L;
+    if (!best || c.sev > best.sev) best = c;
+    if (!near || c.d < near.d) near = c;
+  }
+  camSwitchT -= dt;
+  if (camSwitchT <= 0) {
+    const want = best.sev > 0.15 ? best : near;
+    if (want !== camCity && (want.sev > camCity.sev * 1.25 || camCity.sev < 0.15)) { camCity = want; camSwitchT = 2; }
+  }
+}
+
+function steer(lon, lat, clock) {
+  const wob = Math.sin(clock * 0.45) * 3; // 太平洋高気圧のきまぐれ
+  let w = smooth(22, 33, lat + wob);
+  if (S && S.lazyWest > 0) w *= 0.15;
+  return [-1.7 * (1 - w) + 3.0 * w, 0.6 + 1.1 * smooth(12, 28, lat + wob)];
+}
+
+// ---------- 入力 ----------
+const keys = {};
+addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  keys[e.key.toLowerCase()] = true;
+  if (e.key.startsWith('Arrow')) e.preventDefault();
+});
+addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+let joy = null;
+cv.addEventListener('pointerdown', e => {
+  if (phase === 'place') { tryPlace(e.clientX, e.clientY); return; }
+  if (phase === 'genesis' || phase === 'play') { try { cv.setPointerCapture(e.pointerId); } catch (err) {} }
+  if (phase === 'genesis') { gDown(e.clientX, e.clientY); return; }
+  if (phase === 'play') joy = { x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, id: e.pointerId };
+  if (phase === 'map') { phase = 'result'; $('result').classList.remove('hidden'); }
+});
+cv.addEventListener('pointermove', e => {
+  if (phase === 'genesis') { gMove(e.clientX, e.clientY); return; }
+  if (joy && e.pointerId === joy.id) { joy.x = e.clientX; joy.y = e.clientY; }
+});
+const endJoy = e => {
+  if (G) G.down = false;
+  if (joy && e.pointerId === joy.id) joy = null;
+};
+cv.addEventListener('pointerup', endJoy);
+cv.addEventListener('pointercancel', endJoy);
+
+function getInput() {
+  let x = 0, y = 0;
+  if (keys['arrowleft'] || keys['a']) x -= 1;
+  if (keys['arrowright'] || keys['d']) x += 1;
+  if (keys['arrowup'] || keys['w']) y -= 1;
+  if (keys['arrowdown'] || keys['s']) y += 1;
+  if (joy) { x += (joy.x - joy.x0) / 55; y += (joy.y - joy.y0) / 55; }
+  const m = Math.hypot(x, y);
+  return m > 1 ? [x / m, y / m] : [x, y];
+}
+
+// ---------- 演出 ----------
+function banner(main, sub) {
+  const b = $('banner');
+  b.textContent = main;
+  if (sub) { const s = document.createElement('span'); s.className = 's'; s.textContent = sub; b.appendChild(s); }
+  b.classList.remove('show'); void b.offsetWidth; b.classList.add('show');
+}
+function news(text) {
+  const t = $('tickerText');
+  t.textContent = '【速報】' + text;
+  t.classList.remove('run'); void t.offsetWidth; t.classList.add('run');
+}
+function floatText(text, color) { S.floats.push({ lon: S.lon, lat: S.lat, text, color, life: 1.4 }); }
+const later = (t, fn) => S.timers.push({ t, fn });
+
+// ---------- 発生 ----------
+function tryPlace(x, y) {
+  const [lon, lat] = toWorld(x, y);
+  if (lon < LON0 + 1 || lon > LON1 - 1 || lat < LAT0 || lat > LAT1) return banner('そこは地図の外です');
+  if (landAt(lon, lat)) return banner('陸の上で台風は生まれません', '海をタップしてください');
+  if (lat < 7) return banner('赤道に近すぎて回りません', 'コリオリの力が足りない（北緯7度より北へ）');
+  if (lat > 26 || sst(lon, lat) < 27) return banner('海が冷たすぎて無理です', 'もっと南（オレンジ色の海）へ');
+  startGenesis(lon, lat);
+}
+
+// ---------- 第0章：台風のたまご ----------
+let G = null;
+const GSTEPS = [
+  null,
+  ['① 海をこすって、あたためよう', g => `台風の燃料は、あったかい海から出る水蒸気。海水温がだいたい26.5℃より高いと、水蒸気がどんどん出ます。ここの海水温は ${g.sst.toFixed(1)}℃。`],
+  ['② 雲をタップして、積乱雲に育てよう', () => '水蒸気が冷えて雲のつぶになるとき、熱を出します（潜熱）。あたたまった空気はもっと上へのびて、背の高い積乱雲に。積乱雲がたくさん集まると、台風のたまごになります。'],
+  ['③ 指で反時計回りにぐるぐる回そう', g => `雲の下では、まわりから空気が吸い込まれます。地球が回っているせいで（コリオリの力）その風は曲がり、北半球では反時計回りのうずに。赤道に近いほどこの力は弱く、ここ（北緯${Math.round(g.lat)}度）の回りやすさは ${'★'.repeat(g.stars)}${'☆'.repeat(3 - g.stars)}。`],
+  ['④ うずが、自分で強くなりはじめた！', () => '風が強くなる → 海から水蒸気がもっと出る → 雲が増える → 気圧が下がる → 風がもっと強くなる…。このくりかえしで育ちます。中心の風が秒速17.2mをこえたら「台風」です。']
+];
+const SHEAR_TEXT = '上空と地上の風の強さや向きがちがう（鉛直シア）と、雲の上のほうがずれて、うずがまとまりません。回し続けて耐えよう！';
+const gc = () => [cw / 2, ch * 0.4];
+const gR = () => Math.min(cw * 0.46, ch * 0.32);
+
+function startGenesis(lon, lat) {
+  const cor = clamp(Math.sin(lat * Math.PI / 180) / Math.sin(20 * Math.PI / 180), 0.4, 1.2);
+  G = {
+    lon, lat, sst: sst(lon, lat), cor, stars: cor < 0.6 ? 1 : cor < 0.9 ? 2 : 3,
+    warm: clamp((sst(lon, lat) - 25) / 3, 0.5, 1.5),
+    step: 0, t: 0, humid: 0, vapor: [], clouds: [], gathered: 0, cloudT: 0,
+    spin: 0, rot: 0, ang: null, shear: 0, shearN: 0, wrongT: 0, doneT: 0, down: false, px: 0, py: 0
+  };
+  phase = 'genesis';
+  $('hint').classList.add('hidden');
+  for (const id of ['gChap', 'skipG', 'gcap']) $(id).classList.remove('hidden');
+  setGStep(1);
+}
+function setGStep(n) {
+  G.step = n;
+  $('gStep').textContent = GSTEPS[n][0];
+  $('gBody').textContent = GSTEPS[n][1](G);
+}
+function finishGenesis() {
+  for (const id of ['gChap', 'skipG', 'gcap']) $(id).classList.add('hidden');
+  const { lon, lat } = G;
+  G = null;
+  start(lon, lat);
+}
+function gDown(x, y) {
+  G.down = true; G.px = x; G.py = y; G.ang = null;
+  if (G.step !== 2) return;
+  for (let i = G.clouds.length - 1; i >= 0; i--) {
+    const c = G.clouds[i];
+    if (c.fly || Math.hypot(x - c.x, y - c.y) > c.r + 14) continue;
+    c.lv++; c.r += 7; c.life = Math.max(c.life, 5);
+    for (let k = 0; k < 5; k++) G.vapor.push({ x: c.x + rand(-c.r, c.r), y: c.y + rand(-c.r, c.r), r: 3, life: 1 });
+    if (c.lv >= 3) c.fly = true;
+    return;
+  }
+}
+function gMove(x, y) {
+  if (!G.down) return;
+  if (G.step === 1) {
+    const d = Math.hypot(x - G.px, y - G.py);
+    G.humid = Math.min(100, G.humid + d * 0.022 * G.warm);
+    if (Math.random() < d / 20) G.vapor.push({ x: x + rand(-10, 10), y: y + rand(-10, 10), r: 3, life: 1 });
+  }
+  if (G.step === 3) {
+    const [cx, cy] = gc();
+    const a = Math.atan2(y - cy, x - cx);
+    if (G.ang !== null && Math.hypot(x - cx, y - cy) > 15) {
+      let d = a - G.ang;
+      if (d > Math.PI) d -= Math.PI * 2;
+      if (d < -Math.PI) d += Math.PI * 2;
+      const ccw = -d; // 画面は下向きがプラスなので、反時計回り＝角度が減る
+      if (ccw > 0) G.spin = Math.min(100, G.spin + ccw * 5 * G.cor * (G.shear > 0 ? 0.5 : 1));
+      else {
+        G.spin = Math.max(0, G.spin + ccw * 4);
+        if (ccw < -0.04 && G.wrongT <= 0) { G.wrongT = 2; banner('北半球なので逆です！', '時計の針と反対向きに回してね'); }
+      }
+    }
+    G.ang = a;
+  }
+  G.px = x; G.py = y;
+}
+function updateGenesis(dt) {
+  G.t += dt;
+  for (const v of G.vapor) { v.life -= dt * 0.9; v.r += dt * 12; v.y -= dt * 14; }
+  G.vapor = G.vapor.filter(v => v.life > 0);
+  if (G.wrongT > 0) G.wrongT -= dt;
+  const [cx, cy] = gc(), R = gR();
+  let prog = 0;
+
+  if (G.step === 1) {
+    G.humid = Math.min(100, G.humid + dt * 0.8 * G.warm);
+    if (Math.random() < dt * 4) G.vapor.push({ x: cx + rand(-R, R), y: cy + rand(-R, R), r: 2, life: 0.7 });
+    prog = G.humid / 100;
+    if (G.humid >= 100) { setGStep(2); banner('しめった空気ができた！', '雲が生まれはじめます'); }
+  } else if (G.step === 2) {
+    G.cloudT -= dt;
+    if (G.cloudT <= 0 && G.clouds.filter(c => !c.fly).length < 5) {
+      G.cloudT = rand(0.4, 0.9);
+      const a = rand(0, Math.PI * 2), d = R * rand(0.45, 0.95);
+      G.clouds.push({ x: cx + Math.cos(a) * d, y: cy + Math.sin(a) * d, r: 13, lv: 0, life: rand(6, 9), fly: false, seed: rand(0, 6) });
+    }
+    for (const c of G.clouds) {
+      if (c.fly) {
+        const dx = cx - c.x, dy = cy - c.y, m = Math.hypot(dx, dy);
+        if (m < 20) { c.life = 0; G.gathered++; continue; }
+        const sp = Math.min(m, 420 * dt);
+        c.x += dx / m * sp; c.y += dy / m * sp;
+      } else {
+        c.life -= dt;
+        c.x += Math.sin(G.t + c.seed) * 6 * dt;
+      }
+    }
+    G.clouds = G.clouds.filter(c => c.life > 0);
+    prog = G.gathered / 6;
+    if (G.gathered >= 6) { G.clouds = []; setGStep(3); banner('積乱雲が集まった！', '次は、うずを作ろう'); }
+  } else if (G.step === 3) {
+    if (G.spin < 100) G.spin = Math.max(0, G.spin - dt * (G.shear > 0 ? 9 : 2.5));
+    G.rot += dt * (0.3 + G.spin / 100 * 3);
+    if ((G.shearN === 0 && G.spin > 35) || (G.shearN === 1 && G.spin > 70)) {
+      G.shearN++; G.shear = 3.5;
+      banner('上空に強い風（シア）が吹いてきた！', '雲の頭が吹きとばされる…');
+      $('gBody').textContent = SHEAR_TEXT;
+    }
+    if (G.shear > 0) {
+      G.shear -= dt;
+      if (G.shear <= 0) $('gBody').textContent = GSTEPS[3][1](G);
+    }
+    prog = G.spin / 100;
+    if (G.spin >= 100) { setGStep(4); G.doneT = 4.5; banner('うずができた！', 'もう止まらない'); }
+  } else if (G.step === 4) {
+    G.rot += dt * 4;
+    G.doneT -= dt;
+    prog = 1;
+    if (G.doneT <= 0) finishGenesis();
+  }
+  $('gBar').style.width = (prog * 100).toFixed(1) + '%';
+}
+function drawCloud(x, y, r, alpha) {
+  ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+  for (let k = 0; k < 5; k++) {
+    const a = k * 1.3;
+    ctx.beginPath(); ctx.arc(x + Math.cos(a) * r * 0.45, y + Math.sin(a) * r * 0.45, r * 0.62, 0, Math.PI * 2); ctx.fill();
+  }
+}
+function drawGenesis() {
+  const [cx, cy] = gc(), R = gR();
+  const c = sstColor(G.sst);
+  const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(cw, ch) * 0.8);
+  // 海の青に、水温の色を少しまぜる
+  g.addColorStop(0, `rgb(${c[0] * 0.15 + 20 | 0},${c[1] * 0.1 + 85 | 0},155)`);
+  g.addColorStop(1, '#06101f');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, cw, ch);
+
+  // さざ波
+  ctx.strokeStyle = 'rgba(255,255,255,.07)'; ctx.lineWidth = 2;
+  for (let i = 0; i < 18; i++) {
+    const y = (i * 53 + G.t * 12) % ch, x = (i * 97) % cw;
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + 15, y - 5, x + 30, y); ctx.stroke();
+  }
+  // しめり具合
+  ctx.fillStyle = `rgba(230,240,255,${Math.min(G.humid, 100) / 100 * 0.06})`;
+  ctx.fillRect(0, 0, cw, ch);
+  for (const v of G.vapor) {
+    ctx.fillStyle = `rgba(255,255,255,${v.life * 0.45})`;
+    ctx.beginPath(); ctx.arc(v.x, v.y, v.r, 0, Math.PI * 2); ctx.fill();
+  }
+
+  if (G.step === 2) {
+    ctx.save();
+    ctx.setLineDash([6, 6]); ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(cx, cy, 34, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+    if (G.gathered === 0) {
+      ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('ここに集まる', cx, cy + 52);
+    }
+  }
+  // 真ん中の雲のかたまり
+  if (G.gathered > 0) {
+    const str = G.step >= 3 ? 0.15 + G.spin / 100 * 0.6 : 0.05;
+    const shift = G.shear > 0 ? Math.sin(G.t * 9) * 4 + 14 : 0;
+    drawSwirl(cx + shift, cy, 26 + G.gathered * 9 + (G.step >= 3 ? G.spin * 0.25 : 0), G.rot, str, 1, 0);
+  }
+  for (const cl of G.clouds) {
+    drawCloud(cl.x, cl.y, cl.r, Math.min(0.95, cl.life / 1.5) * (0.6 + cl.lv * 0.13));
+    if (!cl.fly) {
+      ctx.strokeStyle = 'rgba(255,207,74,.7)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(cl.x, cl.y, cl.r + 8, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * cl.lv / 3); ctx.stroke();
+    }
+  }
+  if (G.step === 3) {
+    // 回す向きのガイド（反時計回り）
+    const rg = R * 0.82, a0 = -G.t * 1.5, a1 = a0 - 4.2;
+    ctx.strokeStyle = 'rgba(255,207,74,.75)'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.arc(cx, cy, rg, a0, a1, true); ctx.stroke();
+    const ex = cx + Math.cos(a1) * rg, ey = cy + Math.sin(a1) * rg;
+    const tx = Math.sin(a1), ty = -Math.cos(a1); // 反時計回りの進む向き
+    ctx.fillStyle = 'rgba(255,207,74,.9)';
+    ctx.beginPath();
+    ctx.moveTo(ex + tx * 14, ey + ty * 14);
+    ctx.lineTo(ex - ty * 9, ey + tx * 9);
+    ctx.lineTo(ex + ty * 9, ey - tx * 9);
+    ctx.fill();
+    if (G.shear > 0) {
+      ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 2;
+      for (let i = 0; i < 16; i++) {
+        const x = ((G.t * 700 + i * 137) % (cw + 200)) - 100, y = (i * 61) % ch;
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 90, y); ctx.stroke();
+      }
+    }
+  }
+}
+// ---------- ライブカメラの絵 ----------
+const camCv = $('cam'), cctx = camCv.getContext('2d');
+let camW = 0, camH = 0;
+function sizeCam() {
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  camW = Math.round(Math.min(240, innerWidth * 0.46)); camH = Math.round(camW * 0.62);
+  camCv.width = camW * dpr; camCv.height = camH * dpr;
+  camCv.style.width = camW + 'px'; camCv.style.height = camH + 'px';
+  cctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  $('camBox').style.width = camW + 'px';
+}
+addEventListener('resize', sizeCam); sizeCam();
+
+const lerp = (a, b, f) => a + (b - a) * f;
+const mix = (c0, c1, f) => `rgb(${lerp(c0[0], c1[0], f) | 0},${lerp(c0[1], c1[1], f) | 0},${lerp(c0[2], c1[2], f) | 0})`;
+
+function camWater(x, y, w, h, t, amp) {
+  x.beginPath(); x.moveTo(0, h); x.lineTo(0, y);
+  for (let i = 0; i <= 24; i++) { const xx = i / 24 * w; x.lineTo(xx, y + Math.sin(xx * 0.09 + t * 3) * amp); }
+  x.lineTo(w, h); x.closePath(); x.fill();
+}
+function camHouse(x, hx, gy, hw, hh, storm, t, windV) {
+  const shake = windV > 35 ? Math.sin(t * 40) * 1.2 : 0;
+  x.fillStyle = mix([235, 222, 200], [150, 142, 128], storm);
+  x.fillRect(hx, gy - hh, hw, hh);
+  x.fillStyle = storm > 0.35 ? '#ffd86b' : '#9ec3e6'; // 嵐のときは家の中に明かり
+  x.fillRect(hx + hw * 0.2, gy - hh * 0.65, hw * 0.22, hh * 0.3);
+  x.fillRect(hx + hw * 0.58, gy - hh * 0.65, hw * 0.22, hh * 0.3);
+  x.fillStyle = mix([170, 60, 50], [100, 45, 40], storm);
+  x.beginPath();
+  x.moveTo(hx - hw * 0.1 + shake, gy - hh);
+  x.lineTo(hx + hw / 2 + shake, gy - hh * 1.6);
+  x.lineTo(hx + hw * 1.1 + shake, gy - hh);
+  x.fill();
+}
+function camPerson(x, px, gy, h, windV, t, dir) {
+  const s = h * 0.11, lean = dir * Math.min(windV, 20) * 0.012;
+  x.save(); x.translate(px, gy); x.rotate(lean);
+  x.strokeStyle = '#222'; x.fillStyle = '#222'; x.lineWidth = 1.6;
+  x.beginPath(); x.arc(0, -s * 1.15, s * 0.22, 0, Math.PI * 2); x.fill();
+  x.beginPath(); x.moveTo(0, -s * 0.95); x.lineTo(0, -s * 0.4);
+  x.moveTo(0, -s * 0.4); x.lineTo(-s * 0.2, 0); x.moveTo(0, -s * 0.4); x.lineTo(s * 0.2, 0);
+  x.moveTo(0, -s * 0.8); x.lineTo(s * 0.3, -s * 1.3); x.stroke();
+  // 傘：風が10m/sをこえると裏返る
+  const flip = windV >= 10, wob = flip ? Math.sin(t * 20) * 0.25 : 0;
+  x.translate(s * 0.3, -s * 1.5); x.rotate(dir * (flip ? 0.5 : 0.15) + wob);
+  x.fillStyle = '#e8453c';
+  x.beginPath();
+  if (flip) x.arc(0, -s * 0.5, s * 0.5, 0.15, Math.PI - 0.15);
+  else x.arc(0, s * 0.1, s * 0.5, Math.PI, 0);
+  x.fill();
+  x.restore();
+}
+function camTree(x, bx, gy, th, windN, t, dir) {
+  const bend = (windN * 0.85 + Math.sin(t * (2 + windN * 7)) * windN * 0.25 + Math.sin(t * 1.3) * 0.03) * dir;
+  const tx = bx + bend * th * 0.8, ty = gy - th * (1 - Math.abs(bend) * 0.35);
+  x.strokeStyle = '#6b4a2b'; x.lineWidth = Math.max(3, th * 0.09); x.lineCap = 'round';
+  x.beginPath(); x.moveTo(bx, gy); x.quadraticCurveTo(bx, gy - th * 0.5, tx, ty); x.stroke();
+  x.fillStyle = '#3f8f4a';
+  const r = th * 0.3;
+  for (const [ox, oy, k] of [[0, 0, 1], [-0.7, 0.35, 0.8], [0.7, 0.35, 0.8], [0.15, -0.5, 0.75]]) {
+    x.beginPath(); x.arc(tx + (ox + bend * 0.6) * r, ty + oy * r, r * k, 0, Math.PI * 2); x.fill();
+  }
+  return [tx, ty];
+}
+function drawCam(dt) {
+  const c = camCity, w = camW, h = camH, x = cctx, fx = camFx;
+  const t = fx.t += dt;
+  const windN = clamp(c.wind / 45, 0, 1), rainN = clamp(c.rain / 80, 0, 1), storm = Math.max(windN, rainN);
+  const dir = c.u >= 0 ? 1 : -1, push = c.u * windN;
+  const gy = h * 0.7, bankTop = h * 0.77;
+
+  // 空と雲
+  const sky = x.createLinearGradient(0, 0, 0, gy);
+  sky.addColorStop(0, mix([110, 170, 230], [40, 46, 58], storm));
+  sky.addColorStop(1, mix([200, 225, 245], [80, 88, 100], storm));
+  x.fillStyle = sky; x.fillRect(0, 0, w, gy);
+  x.fillStyle = mix([255, 255, 255], [95, 100, 110], storm);
+  for (let i = 0; i < 4; i++) {
+    const span = w + 80;
+    const cx = (((i * 83 + t * (6 + windN * 90) * dir) % span) + span) % span - 40;
+    const cy = h * (0.12 + (i % 2) * 0.1), r = h * (0.07 + storm * 0.06);
+    x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.arc(cx + r, cy + 2, r * 0.8, 0, Math.PI * 2); x.arc(cx - r, cy + 3, r * 0.75, 0, Math.PI * 2); x.fill();
+  }
+  // 山と地面
+  x.fillStyle = mix([120, 160, 120], [55, 70, 60], storm);
+  x.beginPath(); x.moveTo(0, gy);
+  for (const [px, py] of [[0, 0.15], [0.15, 0.18], [0.35, 0.08], [0.6, 0.22], [0.85, 0.1], [1, 0.15]]) x.lineTo(w * px, gy - h * py);
+  x.lineTo(w, gy); x.fill();
+  x.fillStyle = mix([120, 180, 90], [60, 90, 55], storm);
+  x.fillRect(0, gy, w, bankTop - gy);
+
+  camHouse(x, w * 0.05, gy, w * 0.2, h * 0.17, storm, t, c.wind);
+  camHouse(x, w * 0.29, gy, w * 0.15, h * 0.14, storm, t + 1, c.wind);
+  // 風が強い・避難の段階なら、外に人はいない（ちゃんと避難した）
+  if (c.wind < 20 && riverInfo(c.L)[1] < 3) camPerson(x, w * 0.53, gy, h, c.wind, t, dir);
+  const [tx, ty] = camTree(x, w * 0.75, gy, h * 0.36, windN, t, dir);
+
+  // 川（雨が強いと濁る）
+  x.fillStyle = '#4a3b2a'; x.fillRect(0, bankTop, w, h - bankTop);
+  const muddy = clamp(Math.max(rainN, c.L), 0, 1);
+  x.fillStyle = mix([70, 130, 200], [150, 115, 70], muddy);
+  camWater(x, lerp(h * 0.95, bankTop, Math.min(1, c.L)), w, h, t, 1.5 + c.L * 3);
+  if (c.L > 1) { // 氾濫：堤防をこえて町に水があふれる
+    x.globalAlpha = 0.85;
+    x.fillStyle = mix([150, 115, 70], [120, 95, 60], 0.5);
+    camWater(x, bankTop - (c.L - 1) * h * 0.55, w, h, t * 1.4, 1.5 + c.L);
+    x.globalAlpha = 1;
+  }
+
+  // 葉っぱ・飛んでくる物
+  if (windN > 0.3 && Math.random() < dt * windN * 10) fx.leaves.push({ x: tx, y: ty, vx: dir * rand(60, 160) * windN, vy: rand(-30, 20), a: rand(0, 6) });
+  if (c.wind > 28 && Math.random() < dt * 0.5) {
+    fx.fly.push({ e: pick(['🪣', '📦', '🌂', '🪴', '🧺', '🪧']), x: dir > 0 ? -20 : w + 20, y: rand(h * 0.15, gy - 8), vx: dir * rand(120, 220) * windN, vy: rand(-25, 25), a: 0 });
+  }
+  if (c.wind > 35 && Math.random() < dt * 1.5) { // 屋根がわらが飛ぶ
+    fx.fly.push({ tile: true, x: w * rand(0.08, 0.4), y: gy - h * 0.22, vx: dir * rand(80, 160), vy: rand(-40, -10), a: 0 });
+  }
+  x.fillStyle = '#4caf50';
+  for (const l of fx.leaves) {
+    l.x += l.vx * dt; l.y += l.vy * dt; l.vy += Math.sin(t * 6 + l.a) * 40 * dt; l.a += dt * 8;
+    x.save(); x.translate(l.x, l.y); x.rotate(l.a); x.fillRect(-2.5, -1.2, 5, 2.4); x.restore();
+  }
+  fx.leaves = fx.leaves.filter(l => l.x > -10 && l.x < w + 10 && l.y < h);
+  x.textAlign = 'center'; x.textBaseline = 'middle'; x.font = `${Math.round(h * 0.11)}px sans-serif`;
+  for (const f of fx.fly) {
+    f.x += f.vx * dt; f.y += f.vy * dt; f.a += dt * 6 * Math.sign(f.vx || 1);
+    x.save(); x.translate(f.x, f.y); x.rotate(f.a);
+    if (f.tile) { x.fillStyle = '#5a2d26'; x.fillRect(-4, -2, 8, 4); } else x.fillText(f.e, 0, 0);
+    x.restore();
+  }
+  fx.fly = fx.fly.filter(f => f.x > -30 && f.x < w + 30 && f.y > -30 && f.y < h + 30);
+
+  // 雨
+  const vx = push * 260, vy = 380 + rainN * 200;
+  for (let n = rainN * dt * 900; n > 0; n--) {
+    if (n < 1 && Math.random() > n) break;
+    if (fx.rain.length < 450) fx.rain.push({ x: rand(-w * 0.4, w * 1.4), y: rand(-20, 0) });
+  }
+  x.strokeStyle = 'rgba(205,220,240,.65)'; x.lineWidth = 1;
+  x.beginPath();
+  for (const d of fx.rain) {
+    d.x += vx * dt; d.y += vy * dt;
+    x.moveTo(d.x, d.y); x.lineTo(d.x - vx * 0.025, d.y - vy * 0.025);
+  }
+  x.stroke();
+  fx.rain = fx.rain.filter(d => d.y < h);
+
+  // 雷
+  if (rainN > 0.55 && Math.random() < dt * 0.25) fx.flash = 0.18;
+  if (fx.flash > 0) {
+    fx.flash -= dt;
+    x.fillStyle = `rgba(255,255,240,${Math.max(0, fx.flash) * 3})`; x.fillRect(0, 0, w, h);
+  }
+}
+function updateCamInfo() {
+  const c = camCity, [rl, lv, act] = riverInfo(c.L);
+  $('camName').textContent = `📹 ${c.name}のようす`;
+  const river = lv ? `<span class="lvpill" style="${LV_STYLE[lv]}">Lv${lv}相当</span>${rl}：${act}` : rl;
+  $('camInfo').innerHTML =
+    `☔ 1時間に${Math.round(c.rain)}mm（${rainLabel(c.rain)}）<br>` +
+    `💨 風 ${Math.round(c.wind)}m/s${c.wind >= 10 ? '（' + windEffect(c.wind) + '）' : ''}<br>` +
+    `🌊 川：${river}`;
+}
+
+function start(lon, lat) {
+  S = newState(S0name, lon, lat);
+  phase = 'play';
+  $('hint').classList.add('hidden');
+  $('hud').classList.remove('hidden');
+  $('compass').classList.remove('hidden');
+  $('ticker').classList.remove('hidden');
+  $('camBox').classList.remove('hidden');
+  resetCities();
+  banner('熱帯低気圧が発生しました', 'あったかい海で育てよう');
+  news(`北緯${lat.toFixed(1)}度・東経${lon.toFixed(1)}度で謎の熱帯低気圧が発生`);
+}
+
+// ---------- イベント ----------
+const EVENTS = [
+  function laNina() {
+    globalSST += 1; sstDirty = true;
+    banner('ラニーニャ現象が発動！', '12秒間、海水温 +1℃');
+    later(12, () => { globalSST -= 1; sstDirty = true; });
+  },
+  function oyashio() {
+    const m = Math.hypot(S.vu, S.vv) || 1;
+    coolArea(S.lon + S.vu / m * 4, S.lat + S.vv / m * 4, 3, 4);
+    banner('親潮がなぜか南下してきた！', '進行方向の海がひえひえに');
+  },
+  function forecast() {
+    const pts = []; let lon = S.lon, lat = S.lat;
+    for (let i = 1; i <= 30; i++) {
+      const [u, v] = steer(lon, lat, S.age + i * 0.1);
+      lon += u * 0.1; lat += v * 0.1; pts.push([lon, lat]);
+    }
+    S.forecast = { pts, t: 9 };
+    banner('気象庁が予報円を発表！', '台風の中心が70%の確率で入る範囲。9秒後に外にいたら +300点');
+  },
+  function fan() {
+    S.invert = 6;
+    banner('巨大扇風機が稼働！', '6秒間、操作が逆になる');
+  },
+  function fujiwhara() {
+    const a = rand(0, Math.PI * 2);
+    S.buddy = { dx: Math.cos(a) * 5.5, dy: Math.sin(a) * 5.5, life: 14 };
+    banner('近くで別の台風が発生！', 'ぶつかると合体して強くなる（藤原の効果）');
+  },
+  function lazyWest() {
+    S.lazyWest = 10;
+    banner('偏西風が寝坊した', '10秒間、東に流されにくい');
+  },
+  function sneeze() {
+    const a = rand(0, Math.PI * 2);
+    S.push = [Math.cos(a) * 5, Math.sin(a) * 5]; S.pushT = 1.6;
+    banner('気象庁の人がくしゃみをした', '進路が乱れる');
+  },
+  function nothing() {
+    banner('特になにも起きませんでした');
+  }
+];
+
+// ---------- 更新 ----------
+function update(dt) {
+  if (phase === 'genesis') { updateGenesis(dt); return; }
+  if (phase === 'title' || phase === 'place' || phase === 'result' || phase === 'map') {
+    const s = fitScale();
+    const [gl, ga] = camGoal(135, 25, s);
+    cam.s += (s - cam.s) * Math.min(1, dt * 4);
+    cam.lon += (gl - cam.lon) * Math.min(1, dt * 4);
+    cam.lat += (ga - cam.lat) * Math.min(1, dt * 4);
+    return;
+  }
+  if (phase === 'ending') {
+    S.spin += dt * 1.5;
+    S.endT -= dt;
+    if (S.endT <= 0) showResult();
+    return;
+  }
+
+  const dDay = dt / 3; // 1秒 = 8時間
+  S.age += dDay;
+  const str = clamp((1010 - S.P) / 120, 0, 1);
+  S.spin += dt * (1.2 + str * 5);
+  S.theta += dt * (0.3 + str * 0.9); // 操作が反時計回りに回る
+
+  // 移動
+  const [ix, iy] = getInput();
+  let wx = ix, wy = -iy;
+  if (S.invert > 0) { wx = -wx; wy = -wy; }
+  const c = Math.cos(S.theta), sn = Math.sin(S.theta);
+  const [su, sv] = steer(S.lon, S.lat, S.age);
+  S.vu = su + (wx * c - wy * sn) * 2.4 + (S.pushT > 0 ? S.push[0] : 0);
+  S.vv = sv + (wx * sn + wy * c) * 2.4 + (S.pushT > 0 ? S.push[1] : 0);
+  S.lon += S.vu * dDay; S.lat += S.vv * dDay;
+
+  // 発達・衰弱
+  const land = landAt(S.lon, S.lat);
+  let target, rate;
+  if (land) { target = 1012; rate = 1.6; }
+  else {
+    const t = sst(S.lon, S.lat);
+    target = t <= 26 ? 1010 + (26 - t) * 3 : 1010 - (t - 26) * 25;
+    rate = target < S.P ? 0.17 : 0.7;
+  }
+  S.P += (target - S.P) * (1 - Math.exp(-rate * dDay));
+  if (!land) coolArea(S.lon, S.lat, rDeg(S.P), dDay * (0.5 + str * 1.5));
+
+  // 上陸
+  const onJp = !!(land && land.jp);
+  if (onJp && !S.wasJp) {
+    S.landfalls++;
+    banner(`${S.name}、上陸！`, '陸の上では水蒸気がもらえず、どんどん弱ります');
+    news(`台風${S.no}号「${S.name}」上陸。全国でコロッケが売れています`);
+  }
+  S.wasJp = onJp;
+
+  // アイテム
+  S.itemT -= dt;
+  if (S.itemT <= 0) {
+    S.itemT = rand(0.5, 1.1);
+    const a = rand(0, Math.PI * 2), d = rand(3.5, 8);
+    const lon = S.lon + Math.cos(a) * d, lat = S.lat + Math.sin(a) * d;
+    if (lon > LON0 && lon < LON1 && lat > LAT0 && lat < LAT1 && !landAt(lon, lat)) {
+      const r = Math.random();
+      S.items.push({ type: r < 0.66 ? 'vapor' : r < 0.92 ? 'dry' : 'croq', lon, lat, life: 16, bob: rand(0, 6) });
+    }
+  }
+  const hitR = rDeg(S.P) * 0.85 + 0.35;
+  for (const it of S.items) {
+    it.life -= dt; it.bob += dt * 3;
+    const [u, v] = steer(it.lon, it.lat, S.age);
+    it.lon += u * 0.35 * dDay; it.lat += v * 0.35 * dDay;
+    if (Math.hypot(it.lon - S.lon, it.lat - S.lat) < hitR) {
+      it.life = 0;
+      if (it.type === 'vapor') { const d = Math.round(5 + str * 5); S.P -= d; floatText(`-${d}hPa`, '#7fe3ff'); }
+      else if (it.type === 'dry') { S.P += 9; floatText('+9hPa', '#ff8a7a'); }
+      else { S.croquettes++; floatText('コロッケを吸った（効果なし）', '#ffd27a'); }
+    }
+  }
+  S.items = S.items.filter(it => it.life > 0);
+
+  // イベント
+  S.eventT -= dt;
+  if (S.eventT <= 0) { S.eventT = rand(9, 14); pick(EVENTS)(); }
+  for (const tm of S.timers) { tm.t -= dt; if (tm.t <= 0) tm.fn(); }
+  S.timers = S.timers.filter(tm => tm.t > 0);
+  if (S.invert > 0) S.invert -= dt;
+  if (S.lazyWest > 0) S.lazyWest -= dt;
+  if (S.pushT > 0) S.pushT -= dt;
+  if (S.forecast) {
+    S.forecast.t -= dt;
+    if (S.forecast.t <= 0) {
+      const [el, ea] = S.forecast.pts[S.forecast.pts.length - 1];
+      if (Math.hypot(el - S.lon, ea - S.lat) > 2.6) { S.betray++; banner('予報を裏切った！', '+300点。気象庁が頭を抱えています'); news('気象庁「予報円、あれは何だったのか」'); }
+      else banner('予報どおりに進んでしまった…', 'つまらない台風だと言われています');
+      S.forecast = null;
+    }
+  }
+  if (S.buddy) {
+    const b = S.buddy;
+    b.life -= dt;
+    const a = dt * 0.55, k = Math.exp(-dt * 0.07);
+    const nx = (b.dx * Math.cos(a) - b.dy * Math.sin(a)) * k, ny = (b.dx * Math.sin(a) + b.dy * Math.cos(a)) * k;
+    b.dx = nx; b.dy = ny;
+    if (Math.hypot(b.dx, b.dy) < rDeg(S.P) + 0.6) {
+      S.P -= 15; S.merges++; S.buddy = null;
+      floatText('-15hPa', '#7fe3ff');
+      banner('合体した！！', '気圧が15hPa下がった');
+      news(`台風${S.no}号、別の台風を食べる`);
+    } else if (b.life <= 0) { S.buddy = null; banner('相方の台風は消えました'); }
+  }
+
+  // 冷えた海はゆっくり戻る
+  sstTimer -= dt;
+  if (sstTimer <= 0) {
+    sstTimer = 0.25;
+    for (let i = 0; i < sstOff.length; i++) if (sstOff[i] < 0) sstOff[i] = Math.min(0, sstOff[i] + 0.012);
+    sstDirty = true;
+  }
+
+  updateCities(dt);
+
+  // 記録
+  S.minP = Math.min(S.minP, S.P);
+  S.trackT += dDay;
+  if (S.trackT >= 0.15) { S.trackT = 0; S.track.push({ lon: S.lon, lat: S.lat, P: S.P }); }
+  milestones();
+
+  S.tickT -= dt;
+  if (S.tickT <= 0) { S.tickT = rand(9, 12); news(pick(NEWS)); }
+
+  // カメラ
+  const s = playScale();
+  const [gl, ga] = camGoal(S.lon, S.lat, s);
+  const f = Math.min(1, dt * 3);
+  cam.s += (s - cam.s) * f; cam.lon += (gl - cam.lon) * f; cam.lat += (ga - cam.lat) * f;
+
+  // 終わり判定
+  if (S.lat >= 40) end('温帯低気圧に変わりました', '北の冷たい空気とまざって台風を卒業。でも風雨が強いままのこともある');
+  else if (S.lon < LON0 + 0.3 || S.lon > LON1 - 0.3 || S.lat < LAT0 + 0.3) end('地図の外へ旅立ちました', '気象庁の管轄外です');
+  else if (S.age > 1 && S.P >= 1007) end(S.wasTyphoon ? '熱帯低気圧に変わりました' : '台風になれずに消えました', S.wasTyphoon ? '弱りきってしまった' : 'ただの雨雲でした');
+  else if (S.age > 30) end('長生きしすぎて怒られました', '気象庁「そろそろ消えてください」');
+}
+
+function milestones() {
+  const m = S.milestones, P = S.P;
+  if (!m.ty && wind(P) >= 17.2) {
+    m.ty = S.wasTyphoon = true;
+    banner(`台風${S.no}号「${S.name}」発生！`, `今年${S.no}個目。気象庁の人、「またか」という顔`);
+    news(`台風${S.no}号「${S.name}」が発生。名前をつけたのはあなたです`);
+  }
+  if (!m.st && P <= 975) { m.st = 1; banner('「強い台風」になった！'); }
+  if (!m.vst && P <= 948) { m.vst = 1; banner('「非常に強い台風」になった！', '台風の目ができた。目の中は風が弱いけど、通りすぎると反対向きの暴風が来る'); }
+  if (!m.vio && P <= 917) { m.vio = 1; banner('「猛烈な台風」になった！！', 'ニュース速報のチャイムが鳴りやまない'); }
+  if (!m.p900 && P < 900) { m.p900 = 1; banner('900hPaを切った！', '気象予報士が震えています'); }
+  if (!m.rec && P < 870) { m.rec = 1; banner('観測史上最低の870hPaを更新！！！', '地球のバグです'); news('世界の気象学者、緊急会議'); }
+}
+
+function end(reason, sub) {
+  S.endReason = reason;
+  phase = 'ending'; S.endT = 2.6; joy = null;
+  banner(reason, sub);
+}
+
+// ---------- 結果 ----------
+function rankOf(minP) {
+  if (minP < 870) return ['観測史上最強（地球のバグ）', '気象庁が「台風」の定義を見直し始めました。'];
+  if (minP <= 917) return ['猛烈な台風', 'ニュース速報の音が三日三晩鳴りやみませんでした。'];
+  if (minP <= 948) return ['非常に強い台風', '気象予報士が徹夜しました。'];
+  if (minP <= 975) return ['強い台風', 'コンビニの棚からカップ麺が消えました。'];
+  if (wind(minP) >= 17.2) return ['ふつうの台風', '学校はふつうにありました。'];
+  return ['台風になれなかった何か', 'ただの雨雲でした。洗濯物はよく乾きました。'];
+}
+function showResult() {
+  phase = 'result';
+  const minP = Math.round(S.minP);
+  const days = Math.floor(S.age), hours = Math.floor((S.age - days) * 24);
+  const score = Math.max(0, Math.round((1010 - S.minP) * 10 + S.age * 20 + S.betray * 300 + S.merges * 400));
+  const [rank, comment] = rankOf(S.minP);
+  let extra = '';
+  if (S.landfalls) extra += ` ${S.landfalls}回上陸し、コロッケが全国で${S.landfalls * 12}万個売れました。`;
+  if (S.croquettes) extra += ` コロッケを${S.croquettes}個吸い込みました。`;
+  if (S.floods) extra += ` 大雨で${S.floods}か所の川が氾濫しました。`;
+
+  $('rTitle').textContent = `台風${S.no}号「${S.name}」の一生`;
+  $('rReason').textContent = `最後：${S.endReason}`;
+  $('rRank').textContent = rank;
+  $('rComment').textContent = comment + extra;
+  $('rP').textContent = `${minP} hPa`;
+  $('rV').textContent = `${Math.round(wind(S.minP))} m/s`;
+  $('rAge').textContent = `${days}日${hours}時間`;
+  $('rEtc').textContent = `${S.landfalls} / ${S.merges} / ${S.betray}`;
+  $('rScore').textContent = score.toLocaleString();
+
+  const best = store.get('tyBest', 0);
+  $('rNew').textContent = score > best ? '自己ベスト！' : `（ベスト ${best.toLocaleString()}）`;
+  $('rNew').className = score > best ? 'newrec' : '';
+  if (score > best) store.set('tyBest', score);
+
+  const text = `台風${S.no}号「${S.name}」を自分で作った🌀\n最低気圧 ${minP}hPa／最大風速 ${Math.round(wind(S.minP))}m/s\n階級：${rank}\nスコア ${score}\n#台風つくーる`;
+  const url = location.protocol.startsWith('http') ? '\n' + location.href : '';
+  $('shareX').href = 'https://x.com/intent/post?text=' + encodeURIComponent(text + url);
+
+  typhoonNo++; store.set('tyNo', typhoonNo);
+  $('hud').classList.add('hidden');
+  $('compass').classList.add('hidden');
+  $('ticker').classList.add('hidden');
+  $('camBox').classList.add('hidden');
+  $('result').classList.remove('hidden');
+  startQuiz();
+}
+
+// ---------- 避難クイズ（最初の選択肢が正解。表示するときに並べかえる） ----------
+const QUIZ = [
+  ['台風が近づく夜。家の近くの川や田んぼの様子が気になる。どうする？',
+    ['見に行かない', '懐中電灯を持って見に行く', 'スマホで実況しに行く'],
+    '毎年、川や用水路・田んぼの様子を見に行って流される事故が起きています。気になっても近づかないのが正解です。'],
+  ['市区町村から「警戒レベル4 避難指示」が出た。どうする？',
+    ['危ない場所にいるなら、すぐ避難する', 'レベル5になるまで待つ', 'とりあえずコロッケを買いに行く'],
+    'レベル4は「危ない場所にいる人は全員避難」。レベル5（緊急安全確保）はもう災害が起きているかもしれない段階なので、待ってはいけません。'],
+  ['道路が水につかっている。車で通る？',
+    ['通らずに引き返す', '水深30cmくらいなら平気なので通る', '勢いをつけて突っ込む'],
+    '水深30cmくらいでも車が動かなくなることがあります。水の力でドアが開かなくなることもあるので、水につかった道には入らないこと。'],
+  ['飲み水の備えは、1人1日どれくらいが目安？',
+    ['3リットル', 'コップ1杯', 'コロッケ1個分'],
+    '1人1日3リットルが目安。最低3日分、できれば1週間分あると安心です。'],
+  ['台風の目に入って、急に風がやんで晴れてきた。どうする？',
+    ['まだ外に出ない', '台風が終わったので外で遊ぶ', '屋根の様子を見にのぼる'],
+    '目の中は風が弱いだけで、通りすぎるとすぐ反対向きの暴風が来ます。'],
+  ['夜になって外がもう大荒れ。避難所まで歩くのはとても危なそう。どうする？',
+    ['家の2階以上で、がけからはなれた部屋に移る', 'がんばって避難所まで走る', '1階の窓ぎわで様子を見る'],
+    '移動するほうが危ないときは、家の中のより安全な場所へ（垂直避難）。避難はできるだけ明るいうちに、早めにするのが基本です。'],
+  ['停電にそなえて用意しておくと良いものは？',
+    ['モバイルバッテリーと懐中電灯', 'たくさんのろうそく', '扇風機'],
+    'ろうそくは倒れると火事のもとになります。明かりは懐中電灯やランタンで。スマホの充電も大事です。'],
+  ['自分の家が洪水や土砂災害で危ない場所か知りたい。何を見る？',
+    ['ハザードマップ', 'テレビの天気予報の背景', '去年の年賀状'],
+    '市区町村のハザードマップや、国土交通省の「重ねるハザードマップ」で調べられます。台風が来る前に一度見ておきましょう。'],
+  ['避難するとき、はいていく靴は？',
+    ['運動靴', '長靴', 'サンダル'],
+    '長靴は中に水が入ると重くなって歩きにくくなります。ひもでしっかりしめられる運動靴がおすすめです。']
+];
+let quiz = null;
+function startQuiz() {
+  const qs = QUIZ.slice().sort(() => Math.random() - 0.5).slice(0, 3);
+  quiz = { qs, i: 0, ok: 0 };
+  showQuestion();
+}
+function showQuestion() {
+  const [text, choices, exp] = quiz.qs[quiz.i];
+  $('qNum').textContent = `${quiz.i + 1} / ${quiz.qs.length}`;
+  $('qText').textContent = text;
+  $('qExp').classList.add('hidden');
+  $('qNext').classList.add('hidden');
+  const box = $('qChoices');
+  box.innerHTML = '';
+  const order = choices.map((c, i) => i).sort(() => Math.random() - 0.5);
+  const btns = [];
+  for (const i of order) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'qc'; b.textContent = choices[i];
+    b.addEventListener('click', () => {
+      for (const x of btns) x.disabled = true;
+      const right = btns[order.indexOf(0)];
+      right.classList.add('ok');
+      if (i === 0) quiz.ok++; else b.classList.add('ng');
+      $('qExp').textContent = (i === 0 ? '⭕ 正解！ ' : '❌ ざんねん。 ') + exp;
+      $('qExp').classList.remove('hidden');
+      const last = quiz.i === quiz.qs.length - 1;
+      $('qNext').textContent = last ? `そなえ力 ${quiz.ok} / ${quiz.qs.length}（もう一回）` : '次の問題';
+      $('qNext').classList.remove('hidden');
+    });
+    btns.push(b); box.appendChild(b);
+  }
+}
+$('qNext').addEventListener('click', () => {
+  if (quiz.i < quiz.qs.length - 1) { quiz.i++; showQuestion(); }
+  else startQuiz();
+});
+
+// ---------- まなび ----------
+function openLearn(tab) {
+  for (const t of document.querySelectorAll('.tab')) t.classList.toggle('on', t.dataset.tab === tab);
+  for (const p of document.querySelectorAll('.lpane')) p.classList.toggle('hidden', p.dataset.pane !== tab);
+  $('learn').classList.remove('hidden');
+  $('learn').querySelector('.card').scrollTop = 0;
+}
+for (const t of document.querySelectorAll('.tab')) t.addEventListener('click', () => openLearn(t.dataset.tab));
+for (const b of document.querySelectorAll('.learnBtn')) b.addEventListener('click', () => openLearn('how'));
+$('learnClose').addEventListener('click', () => $('learn').classList.add('hidden'));
+$('skipG').addEventListener('click', () => { if (G) finishGenesis(); });
+
+// ---------- 描画 ----------
+function drawTyphoon(lon, lat, P, spin, alpha) {
+  const [x, y] = toScr(lon, lat);
+  const r = rDeg(P) * cam.s * 1.5;
+  const eye = P < 975 ? Math.max(2.5, r * (0.05 + (975 - P) * 0.0006)) : 0;
+  drawSwirl(x, y, r, spin, clamp((1010 - P) / 120, 0, 1), alpha, eye);
+}
+function drawSwirl(x, y, r, spin, str, alpha, eye) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.globalAlpha = alpha;
+  const g = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+  g.addColorStop(0, `rgba(255,255,255,${0.55 + str * 0.4})`);
+  g.addColorStop(0.45, `rgba(240,245,255,${0.35 + str * 0.3})`);
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+  ctx.rotate(-spin);
+  ctx.lineCap = 'round';
+  const arms = 4;
+  for (let k = 0; k < arms; k++) {
+    ctx.rotate(Math.PI * 2 / arms);
+    for (let seg = 0; seg < 14; seg++) {
+      const t0 = seg / 14, t1 = (seg + 1) / 14;
+      const p = t => { const a = t * (2.6 + str * 1.4), rr = r * (0.12 + t * 1.05); return [Math.cos(a) * rr, Math.sin(a) * rr]; };
+      const [ax, ay] = p(t0), [bx, by] = p(t1);
+      ctx.strokeStyle = `rgba(255,255,255,${(0.75 - t0 * 0.7) * (0.5 + str * 0.5)})`;
+      ctx.lineWidth = Math.max(1.5, r * 0.22 * (1 - t0 * 0.8));
+      ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
+    }
+  }
+  if (eye) {
+    ctx.fillStyle = 'rgba(20,45,80,.95)';
+    ctx.beginPath(); ctx.arc(0, 0, eye, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+}
+function trackColor(P) { return klass(P)[1]; }
+
+function draw() {
+  if (phase === 'genesis') { drawGenesis(); return; }
+  ctx.fillStyle = '#06101f';
+  ctx.fillRect(0, 0, cw, ch);
+  if (sstDirty) renderSST();
+  const [x0, y0] = toScr(LON0, LAT1);
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(sstCv, x0, y0, (LON1 - LON0) * cam.s, (LAT1 - LAT0) * cam.s);
+
+  // 経緯線
+  ctx.strokeStyle = 'rgba(255,255,255,.13)'; ctx.lineWidth = 1;
+  ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.font = '10px sans-serif';
+  for (let lon = 115; lon < LON1; lon += 5) {
+    const [x] = toScr(lon, 0); ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x, toScr(0, LAT0)[1]); ctx.stroke();
+    if (lon % 10 === 0) ctx.fillText(`${lon}°E`, x + 2, toScr(0, LAT0)[1] - 34);
+  }
+  for (let lat = 10; lat < LAT1; lat += 5) {
+    const [, y] = toScr(0, lat); ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(toScr(LON1, 0)[0], y); ctx.stroke();
+    if (lat % 10 === 0) ctx.fillText(`${lat}°N`, Math.max(x0, 0) + 2, y - 2);
+  }
+
+  // 陸
+  for (const l of LANDS) {
+    ctx.beginPath();
+    l.pts.forEach(([lo, la], i) => { const [x, y] = toScr(lo, la); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+    ctx.closePath();
+    ctx.fillStyle = l.jp ? '#b9c98e' : '#a7b48a';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(40,50,30,.7)'; ctx.lineWidth = 1; ctx.stroke();
+  }
+
+  if (phase === 'place') {
+    const [ax, ay] = toScr(122, 24), [bx, by] = toScr(158, 9);
+    ctx.save();
+    ctx.setLineDash([6, 6]); ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 2;
+    ctx.strokeRect(ax, ay, bx - ax, by - ay);
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center';
+    ctx.globalAlpha = 0.6 + Math.sin(performance.now() / 300) * 0.3;
+    ctx.fillText('↓ このへんの海をタップ', (ax + bx) / 2, (ay + by) / 2);
+    ctx.restore();
+  }
+
+  if (!S) return;
+
+  // 進路
+  ctx.lineWidth = 2;
+  for (let i = 1; i < S.track.length; i++) {
+    const a = S.track[i - 1], b = S.track[i];
+    const [ax, ay] = toScr(a.lon, a.lat), [bx, by] = toScr(b.lon, b.lat);
+    ctx.strokeStyle = trackColor(b.P);
+    ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
+  }
+  for (let i = 0; i < S.track.length; i += 3) {
+    const p = S.track[i], [x, y] = toScr(p.lon, p.lat);
+    ctx.fillStyle = trackColor(p.P);
+    ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // 予報円
+  if (S.forecast) {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.setLineDash([5, 5]); ctx.lineWidth = 1.5;
+    S.forecast.pts.forEach(([lo, la], i) => {
+      if (i % 10 !== 9) return;
+      const [x, y] = toScr(lo, la);
+      ctx.beginPath(); ctx.arc(x, y, (0.9 + i / 29 * 1.7) * cam.s, 0, Math.PI * 2); ctx.stroke();
+    });
+    ctx.setLineDash([]);
+    const [lx, ly] = toScr(...S.forecast.pts[S.forecast.pts.length - 1]);
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(`予報円 あと${Math.ceil(S.forecast.t)}秒`, lx, ly);
+    ctx.restore();
+  }
+
+  // アイテム
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const isz = clamp(cam.s * 1.1, 16, 30);
+  ctx.font = `${isz}px sans-serif`;
+  for (const it of S.items) {
+    const [x, y] = toScr(it.lon, it.lat);
+    ctx.globalAlpha = Math.min(1, it.life / 2);
+    ctx.fillText(it.type === 'vapor' ? '💧' : it.type === 'dry' ? '🏜️' : '🥔', x, y + Math.sin(it.bob) * 3);
+  }
+  ctx.globalAlpha = 1;
+
+  if (S.buddy) drawTyphoon(S.lon + S.buddy.dx, S.lat + S.buddy.dy, 985, S.spin * 1.3, Math.min(1, S.buddy.life / 2));
+  drawTyphoon(S.lon, S.lat, S.P, S.spin, phase === 'ending' ? Math.max(0, S.endT / 2.6) : 1);
+
+  // 浮かぶ文字
+  ctx.font = 'bold 15px sans-serif';
+  for (const f of S.floats) {
+    const [x, y] = toScr(f.lon, f.lat);
+    ctx.globalAlpha = Math.min(1, f.life);
+    ctx.fillStyle = '#000'; ctx.fillText(f.text, x + 1, y - 30 - (1.4 - f.life) * 30 + 1);
+    ctx.fillStyle = f.color; ctx.fillText(f.text, x, y - 30 - (1.4 - f.life) * 30);
+  }
+  ctx.globalAlpha = 1;
+  ctx.textBaseline = 'alphabetic';
+
+  // スティック
+  if (joy && phase === 'play') {
+    ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(joy.x0, joy.y0, 55, 0, Math.PI * 2); ctx.stroke();
+    const dx = joy.x - joy.x0, dy = joy.y - joy.y0, m = Math.hypot(dx, dy), k = m > 55 ? 55 / m : 1;
+    ctx.fillStyle = 'rgba(255,255,255,.5)';
+    ctx.beginPath(); ctx.arc(joy.x0 + dx * k, joy.y0 + dy * k, 18, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+function updateHud() {
+  if (!S || phase !== 'play') return;
+  const [cls, col] = klass(S.P);
+  $('hName').textContent = S.wasTyphoon ? `台風${S.no}号「${S.name}」` : `熱帯低気圧（のちの「${S.name}」）`;
+  const hc = $('hCls'); hc.textContent = cls; hc.style.background = col;
+  $('hP').textContent = Math.round(S.P);
+  $('hV').textContent = Math.round(wind(S.P));
+  const d = Math.floor(S.age), h = Math.floor((S.age - d) * 24);
+  const land = landAt(S.lon, S.lat);
+  $('hSub').textContent = `発生から${d}日${h}時間 ／ ${land ? '陸の上（弱る）' : '海水温 ' + sst(S.lon, S.lat).toFixed(1) + '℃'}`;
+  $('hWind').textContent = 'この風だと：' + windEffect(wind(S.P));
+  const pills = [];
+  if (S.invert > 0) pills.push(`操作逆 ${Math.ceil(S.invert)}`);
+  if (S.lazyWest > 0) pills.push(`偏西風おやすみ ${Math.ceil(S.lazyWest)}`);
+  if (globalSST > 0) pills.push('ラニーニャ中');
+  $('hPills').innerHTML = '';
+  for (const p of pills) { const e = document.createElement('span'); e.className = 'pill'; e.textContent = p; $('hPills').appendChild(e); }
+  $('needle').style.transform = `rotate(${-(S.theta + (S.invert > 0 ? Math.PI : 0))}rad)`;
+}
+
+let last = performance.now();
+function loop(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  update(dt);
+  if (S) for (const f of S.floats) f.life -= dt;
+  if (S) S.floats = S.floats.filter(f => f.life > 0);
+  draw();
+  updateHud();
+  if (S && (phase === 'play' || phase === 'ending')) {
+    drawCam(dt);
+    camInfoT -= dt;
+    if (camInfoT <= 0) { camInfoT = 0.2; updateCamInfo(); }
+  }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+// ---------- 画面の切り替え ----------
+let S0name = '';
+function showTitle() {
+  phase = 'title';
+  const best = store.get('tyBest', 0);
+  $('bestLine').textContent = `次は 台風${typhoonNo}号` + (best ? ` ／ 自己ベスト ${best.toLocaleString()}点` : '');
+  $('title').classList.remove('hidden');
+}
+$('randName').addEventListener('click', () => { $('nameIn').value = pick(NAMES); });
+$('startBtn').addEventListener('click', () => {
+  S0name = $('nameIn').value.trim() || pick(NAMES);
+  $('nameIn').blur();
+  $('title').classList.add('hidden');
+  $('hint').classList.remove('hidden');
+  S = null; sstOff.fill(0); globalSST = 0; sstDirty = true;
+  phase = 'place';
+});
+$('againBtn').addEventListener('click', () => {
+  $('result').classList.add('hidden');
+  S = null; sstOff.fill(0); globalSST = 0; sstDirty = true;
+  $('nameIn').value = '';
+  showTitle();
+});
+$('mapBtn').addEventListener('click', () => {
+  $('result').classList.add('hidden');
+  phase = 'map';
+  banner('タップで結果にもどる');
+});
+showTitle();
+})();
+</script>
+</body>
+</html>
